@@ -10,6 +10,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False)
+    full_name = Column(String, nullable=False)
     hashed_password = Column(String, nullable=False)
     is_admin = Column(Boolean, default=False)
 
@@ -20,14 +21,15 @@ class Booking(Base):
     __tablename__ = "bookings"
 
     id = Column(Integer, primary_key=True, index=True)
+    booking_time = Column(DateTime(timezone=True), nullable=False, index=True)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     phone = Column(String, nullable=False)
     number_of_guests = Column(Integer, nullable=False)
     table_number = Column(Integer, nullable=False)
     instructions_acknowledged = Column(Boolean, default=False)
-    hookah_needed = Column(Boolean, default=False)
+    extra_info = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    created_by_id = Column(Integer, ForeignKey("users.id"))
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     created_by = relationship("User", back_populates="bookings")
