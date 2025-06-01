@@ -28,6 +28,7 @@ class BookingBase(BaseModel):
     table_number: int
     instructions_acknowledged: bool = False
     extra_info: Optional[str] = None
+    arrived: bool = False
 
 class BookingCreate(BookingBase):
     pass

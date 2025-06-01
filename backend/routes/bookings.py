@@ -15,11 +15,10 @@ def create_new_booking(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_user)
 ):
-    data = booking.dict()
-    # Добавляем поле created_by_id прямо в модель
+    data = booking.dict(exclude={'arrived'})
     from backend import models
 
-    db_booking = models.Booking(**data, created_by_id=current_user.id)
+    db_booking = models.Booking(**data, created_by_id=current_user.id, arrived=False)
     db.add(db_booking)
     db.commit()
     db.refresh(db_booking)

@@ -1,61 +1,102 @@
+/* frontend/src/components/BookingList.css */
+
+:root {
+  --silver:       #B0AFA9;
+  --burgundy:     #6E1720;
+  --bistre:       #36251A;
+  --beige:        #CDBFB4;
+  --white:        #FFFFFF;
+  --gray-light:   #F0F0F0;
+  --shadow-light: rgba(0, 0, 0, 0.1);
+  --radius:       6px;
+}
+
+/* Таблица */
 .table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
 }
-
-.table th,
-.table td {
-  border: 1px solid #ccc;
+.table thead th {
+  background-color: var(--burgundy);
+  color: var(--white);
+  padding: 12px;
+  border: 1px solid var(--bistre);
+}
+.table tbody tr:nth-child(odd)  { background-color: var(--silver); }
+.table tbody tr:nth-child(even) { background-color: var(--beige); }
+.table th, .table td {
+  border: 1px solid var(--bistre);
   padding: 12px;
   vertical-align: top;
 }
-
-.filters {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 15px;
+.table tbody tr:hover {
+  background-color: var(--bistre);
+  color: var(--white);
+  cursor: pointer;
 }
 
+/* Контейнер фильтров */
+.filters {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  background-color: var(--silver);
+  border-radius: var(--radius);
+  box-shadow: 0 2px 4px var(--shadow-light);
+  padding: 4px;
+}
+/* каждый прямой ребёнок */
+.filters > * { flex: 1; }
+
+/* Принудительно даём DatePicker-wrapper равный flex */
+.filters > .react-datepicker-wrapper {
+  flex: 1;
+}
+
+/* Кнопки-фильтры */
+.filters .btn {
+  width: 100%;
+  text-align: center;
+  border: none;
+  background: none;
+  padding: 8px 0;
+  border-radius: var(--radius);
+  transition: background-color 0.2s, color 0.2s;
+  color: var(--bistre);
+  font-weight: 500;
+}
+.filters .btn:hover  { background-color: var(--beige); }
+.filters .btn.active { background-color: var(--burgundy); color: var(--white); }
+
+/* Скрываем нативный input у DatePicker */
+.filters .react-datepicker__input-container input {
+  display: none;
+}
+
+/* Базовые кнопки */
 .btn {
   padding: 8px 14px;
   font-size: 14px;
   cursor: pointer;
-  border: 1px solid #888;
-  background-color: #fff;
-  transition: background-color 0.2s, border-color 0.2s;
+  border: 1px solid var(--bistre);
+  background-color: var(--white);
+  color: var(--bistre);
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+.btn:hover      { background-color: var(--silver); }
+.btn:active     { background-color: var(--beige); }
+.btn.active     { background-color: var(--burgundy); color: var(--white); border-color: var(--bistre); }
+
+/* Отступ у «Добавить бронь» */
+button.btn[style] {
+  margin-bottom: 12px !important;
 }
 
-.btn:hover {
-  background-color: #f0f0f0;
-}
-
-.btn:active {
-  background-color: #e0e0e0;
-}
-
-/* Активный фильтр */
-.btn.active {
-  background-color: #007bff;
-  color: #fff;
-  border-color: #0056b3;
-}
-
-/* Строка при наведении */
-.table tbody tr:hover {
-  background-color: #fafafa;
-  cursor: pointer;
-}
-
-/* Подстрока с кнопками */
-.action-row td {
-  background-color: #f9f9f9;
-  text-align: center;
-  padding: 8px;
-}
-
-/* Кнопки в подстроке */
-.action-row .btn {
-  margin: 0 4px;
+.react-datepicker-popper {
+  position: absolute !important;
+  top: 100%;
+  left: 0;
+  z-index: 10;
 }

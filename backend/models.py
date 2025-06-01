@@ -29,6 +29,7 @@ class Booking(Base):
     table_number = Column(Integer, nullable=False)
     instructions_acknowledged = Column(Boolean, default=False)
     extra_info = Column(String, nullable=True)
+    arrived = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     created_by_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)

@@ -1,166 +1,195 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import api from '../api';
 import dayjs from 'dayjs';
+import DatePicker from 'react-datepicker';
 import BookingForm from './BookingForm';
 import './BookingList.css';
+import 'react-datepicker/dist/react-datepicker.css';
 
 export default function BookingList() {
-  const [bookings, setBookings]       = useState([]);
-  const [filter, setFilter]           = useState('today');
-  const [customDate, setCustomDate]   = useState(dayjs().format('YYYY-MM-DD'));
-  const [editing, setEditing]         = useState(null);
-  const [showForm, setShowForm]       = useState(false);
-  const [expandedId, setExpandedId]   = useState(null);
+  const PAGE_SIZE = 20;
+
+  const [bookings, setBookings]     = useState([]);
+  const [filter, setFilter]         = useState('today');
+  const [customDate, setCustomDate] = useState(new Date());
+  const [page, setPage]             = useState(0);
+  const [hasMore, setHasMore]       = useState(false);
+  const [editing, setEditing]       = useState(null);
+  const [showForm, setShowForm]     = useState(false);
+  const [expandedId, setExpandedId] = useState(null); // <-- добавлено состояние
 
   const FILTERS = {
-    today:    () => ({ from: dayjs().startOf('day'),      to: dayjs().endOf('day') }),
-    tomorrow: () => { const m = dayjs().add(1,'day');     return { from: m.startOf('day'), to: m.endOf('day') }; },
-    week:     () => ({ from: dayjs().startOf('day'),      to: dayjs().add(7,'day').endOf('day') }),
-    custom:   d  => ({ from: dayjs(d).startOf('day'),      to: dayjs(d).endOf('day') }),
+    today:    () => ({ from: dayjs().startOf('day'),   to: dayjs().endOf('day') }),
+    tomorrow: () => { const m = dayjs().add(1,'day');  return { from: m.startOf('day'), to: m.endOf('day') }; },
+    week:     () => ({ from: dayjs().startOf('week'),  to: dayjs().endOf('week') }),
+    custom:   d => ({ from: dayjs(d).startOf('day'),   to: dayjs(d).endOf('day') }),
+    all:      () => null,
   };
 
-  // Загрузка и фильтрация
-  useEffect(() => {
-    api.get('/bookings')
+  const loadBookings = useCallback(() => {
+    api.get('/bookings', { params: { skip: page * PAGE_SIZE, limit: PAGE_SIZE } })
       .then(res => {
-        const { from, to } = filter==='custom'
-          ? FILTERS.custom(customDate)
-          : FILTERS[filter]();
-        const list = res.data
-          .map(b => ({ ...b, dt: dayjs(b.booking_time) }))
-          .filter(b => {
+        let data = res.data.map(b => ({ ...b, dt: dayjs(b.booking_time) }));
+        if (filter !== 'all') {
+          const { from, to } = FILTERS[filter](customDate);
+          data = data.filter(b => {
             const t = b.dt.valueOf();
             return t >= from.valueOf() && t <= to.valueOf();
-          })
-          .sort((a,b)=>a.dt.valueOf()-b.dt.valueOf());
-        setBookings(list);
+          });
+        }
+        setBookings(data);
+        setHasMore(data.length === PAGE_SIZE);
       })
       .catch(console.error);
-  }, [filter, customDate]);
+  }, [filter, customDate, page]);
+
+  useEffect(() => { setPage(0); }, [filter, customDate]);
+  useEffect(loadBookings, [loadBookings]);
 
   const headerLabel = () => {
-    if (filter==='today')    return 'сегодня';
-    if (filter==='tomorrow') return 'завтра';
-    if (filter==='week')     return 'на следующую неделю';
-    return `на ${dayjs(customDate).format('DD-MM-YYYY')}`;
+    if (filter === 'today')   return 'сегодня';
+    if (filter === 'tomorrow')return 'завтра';
+    if (filter === 'week')    return 'на эту неделю';
+    if (filter === 'custom')  return `на ${dayjs(customDate).format('DD-MM-YYYY')}`;
+    return '';
   };
 
-  const toggleForm = () => {
-    setEditing(null);
-    setShowForm(v => !v);
-    setExpandedId(null);
-  };
-
-  const startEdit = booking => {
-    setEditing(booking);
-    setShowForm(true);
-    setExpandedId(null);
-  };
-
-  const handleCreated = () => {
+  const onFilterClick = key => {
+    setFilter(key);
     setShowForm(false);
-    setEditing(null);
-    setExpandedId(null);
-  };
-
-  const handleUpdated = updated => {
-    const u = { ...updated, dt: dayjs(updated.booking_time) };
-    setShowForm(false);
-    setEditing(null);
-    setExpandedId(null);
-    setBookings(bs => bs.map(b => b.id===u.id ? u : b));
-  };
-
-  const handleDelete = async id => {
-    if (!window.confirm('Удалить эту бронь?')) return;
-    await api.delete(`/bookings/${id}`);
-    setBookings(bs => bs.filter(b => b.id !== id));
+    setPage(0);
     setExpandedId(null);
   };
 
   return (
-    <div style={{ padding:20 }}>
+    <div style={{ padding: 20 }}>
       <h2>Бронирования {headerLabel()}</h2>
 
-      {/* Кнопка между заголовком и фильтрами */}
-      <button className="btn" onClick={toggleForm} style={{ marginBottom:12 }}>
-        {showForm ? 'Отменить' : 'Добавить бронь'}
+      <button
+        className="btn"
+        onClick={() => {
+          setShowForm(v => !v);
+          setEditing(null);
+          setExpandedId(null);
+        }}
+        style={{ marginBottom: 12 }}
+      >
+        {showForm ? 'Отменить' : 'Добавить бронь'}
       </button>
 
-      {showForm && !editing &&
-        <BookingForm onCreated={handleCreated} />
-      }
-      {showForm && editing &&
-        <BookingForm editableBooking={editing} onUpdate={handleUpdated} />
-      }
+      {showForm && !editing && (
+        <BookingForm onCreated={() => { loadBookings(); }} />
+      )}
+      {showForm && editing && (
+        <BookingForm
+          editableBooking={editing}
+          onUpdate={() => { loadBookings(); setEditing(null); }}
+        />
+      )}
 
-      {/* Фильтры */}
       <div className="filters">
-        {['today','tomorrow','week','custom'].map(key => {
-          let label = key==='today' ? 'Сегодня'
-                    : key==='tomorrow' ? 'Завтра'
-                    : key==='week' ? 'На неделю'
-                    : '';
-          return key!=='custom' ? (
+        {['today','tomorrow','week','custom','all'].map(key => {
+          const labels = {
+            today: 'Сегодня',
+            tomorrow: 'Завтра',
+            week: 'На неделю',
+            custom: 'Выбрать дату',
+            all: 'Все'
+          };
+          return key !== 'custom' ? (
             <button
               key={key}
-              className={`btn${filter===key?' active':''}`}
-              onClick={() => { setFilter(key); setShowForm(false); setExpandedId(null); }}
+              className={`btn${filter === key ? ' active' : ''}`}
+              onClick={() => onFilterClick(key)}
             >
-              {label}
+              {labels[key]}
             </button>
           ) : (
-            <React.Fragment key="custom">
-              <input
-                type="date"
-                value={customDate}
-                onChange={e=>setCustomDate(e.target.value)}
-                onKeyDown={e=>e.key==='Enter'&&setFilter('custom')}
-              />
-              <button
-                className={`btn${filter==='custom'?' active':''}`}
-                onClick={()=>{setFilter('custom'); setShowForm(false); setExpandedId(null);}}
-              >
-                По дате 🔍
-              </button>
-            </React.Fragment>
+            <DatePicker
+              key="custom"
+              selected={customDate}
+              onChange={date => { setCustomDate(date); onFilterClick('custom'); }}
+              customInput={
+                <button className={`btn${filter === 'custom' ? ' active' : ''}`}>
+                  Выбрать дату
+                </button>
+              }
+              dateFormat="dd-MM-yyyy"
+            />
           );
         })}
       </div>
 
-      {/* Таблица */}
       <table className="table">
         <thead>
           <tr>
-            <th>Время</th><th>Гость</th><th>Телефон</th>
-            <th>Кол-во гостей</th><th>Стол №</th>
-            <th>Инстр.</th><th>Комментарий</th><th>Создал</th>
+            <th>Время</th>
+            <th>Гость</th>
+            <th>Телефон</th>
+            <th>Кол-во гостей</th>
+            <th>Стол №</th>
+            <th>Инстр.</th>
+            <th>Комментарий</th>
+            <th>Создатель</th>
+            <th>Посещение</th>
           </tr>
         </thead>
         <tbody>
           {bookings.map(b => (
             <React.Fragment key={b.id}>
-              <tr onClick={() => setExpandedId(expandedId===b.id ? null : b.id)}>
+              <tr onClick={() => setExpandedId(expandedId === b.id ? null : b.id)}>
                 <td>
-                  {filter==='week'
+                  {filter === 'week'
                     ? b.dt.format('DD-MM HH:mm')
                     : b.dt.format('HH:mm')}
                 </td>
                 <td>{`${b.first_name} ${b.last_name}`}</td>
                 <td>{b.phone}</td>
-                <td style={{textAlign:'right'}}>{b.number_of_guests}</td>
-                <td style={{textAlign:'right'}}>{b.table_number}</td>
-                <td style={{textAlign:'center'}}>{b.instructions_acknowledged?'Да':'Нет'}</td>
-                <td>{b.extra_info||'—'}</td>
+                <td style={{ textAlign: 'right' }}>{b.number_of_guests}</td>
+                <td style={{ textAlign: 'right' }}>{b.table_number}</td>
+                <td style={{ textAlign: 'center' }}>
+                  {b.instructions_acknowledged ? 'Да' : 'Нет'}
+                </td>
+                <td>{b.extra_info || '—'}</td>
                 <td>{b.created_by.full_name}</td>
+                <td style={{ textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={b.arrived}
+                    onChange={async () => {
+                      await api.put(`/bookings/${b.id}`, {
+                        ...b,
+                        booking_time: b.dt.toISOString(),
+                        arrived: !b.arrived
+                      });
+                      loadBookings();
+                      setExpandedId(null);
+                    }}
+                  />
+                </td>
               </tr>
-              {expandedId===b.id && (
+              {expandedId === b.id && (
                 <tr className="action-row">
-                  <td colSpan={8}>
-                    <button className="btn" onClick={() => startEdit(b)}>
+                  <td colSpan={9}>
+                    <button
+                      className="btn"
+                      onClick={() => {
+                        setEditing(b);
+                        setShowForm(true);
+                        setExpandedId(null);
+                      }}
+                    >
                       Редактировать
                     </button>
-                    <button className="btn" onClick={() => handleDelete(b.id)}>
+                    <button
+                      className="btn"
+                      onClick={async () => {
+                        if (!window.confirm('Удалить эту бронь?')) return;
+                        await api.delete(`/bookings/${b.id}`);
+                        loadBookings();
+                        setExpandedId(null);
+                      }}
+                    >
                       Удалить
                     </button>
                   </td>
@@ -170,6 +199,23 @@ export default function BookingList() {
           ))}
         </tbody>
       </table>
+
+      <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between' }}>
+        <button
+          className="btn"
+          onClick={() => setPage(p => Math.max(p - 1, 0))}
+          disabled={page === 0}
+        >
+          ← Назад
+        </button>
+        <button
+          className="btn"
+          onClick={() => setPage(p => p + 1)}
+          disabled={!hasMore}
+        >
+          Вперед →
+        </button>
+      </div>
     </div>
   );
 }
