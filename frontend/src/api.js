@@ -6,7 +6,19 @@ const api = axios.create({
 
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('access_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  if (config.url && config.url.startsWith('/service/')) {
+    const key = process.env.REACT_APP_SERVICE_API_KEY;
+    if (!key) {
+      console.warn('SERVICE_API_KEY не задан в переменных окружения!');
+    } else {
+      config.headers['X-API-Key'] = key;
+    }
+  }
+
   return config;
 });
 

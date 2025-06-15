@@ -1,0 +1,231 @@
+.mini-form {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 15px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  border: 1px solid #ddd;
+  position: relative;
+  z-index: 1001;
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.form-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #777;
+  padding: 0;
+  line-height: 1;
+}
+
+.close-button:hover {
+  color: #333;
+}
+
+.mini-form__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mini-form__row {
+  display: flex;
+  gap: 10px;
+}
+
+.mini-form__field {
+  flex: 1;
+}
+
+.mini-form__field label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.mini-form__input,
+.mini-form__textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.mini-form__input:focus,
+.mini-form__textarea:focus {
+  outline: none;
+  border-color: #28a745;
+  box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.25);
+}
+
+.mini-form__input:invalid:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
+}
+
+.mini-form__textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.mini-form__checkbox {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+}
+
+.mini-form__checkbox input {
+  margin-right: 8px;
+}
+
+.mini-form__checkbox label {
+  font-size: 14px;
+  color: #333;
+}
+
+.mini-form__submit {
+  width: 100%;
+  padding: 10px;
+  background-color: #6E1720;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-top: 10px;
+}
+
+.mini-form__submit:hover {
+  background-color: #5a1320;
+}
+
+.mini-form__error {
+  color: #d32f2f;
+  background-color: #fce4ec;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.react-datepicker {
+  font-family: inherit;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+.react-datepicker__header {
+  background-color: #f5f5f5;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  position: relative;
+}
+
+.react-datepicker__current-month,
+.react-datepicker-time__header {
+  color: #333;
+  font-weight: 500;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__time-list-item--selected {
+  background-color: #6E1720 !important;
+}
+
+.react-datepicker__time-container {
+  border-left: 1px solid #ddd;
+  float: none !important;
+  position: static !important;
+}
+
+.react-datepicker__time-list-item {
+  padding: 5px 10px;
+}
+
+.react-datepicker-popper {
+  position: absolute !important;
+  top: calc(100% + 4px) !important;
+  left: 0 !important;
+  z-index: 1002 !important;
+}
+
+.mini-form {
+  position: relative;
+}
+
+.date-picker-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.date-picker-wrapper .react-datepicker {
+  display: flex !important;
+  flex-direction: row !important;
+  max-width: 350px;
+  min-width: 320px;
+}
+
+.date-picker-wrapper .react-datepicker__month-container {
+  border-right: 1px solid #ddd;
+}
+
+.date-picker-wrapper .react-datepicker__time-container {
+  border-left: 1px solid #ddd;
+  float: none !important;
+  position: static !important;
+}
+
+.date-picker-wrapper .react-datepicker__navigation {
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+}
+
+.date-picker-wrapper .react-datepicker__navigation-icon::before {
+  top: 4px;
+}
+
+.date-picker-wrapper .react-datepicker__navigation--previous {
+  left: 8px;
+  right: auto;
+}
+
+.date-picker-wrapper .react-datepicker__navigation--next {
+  right: 8px;
+  left: auto;
+}
+
+.date-picker-wrapper .react-datepicker__time-container .react-datepicker__navigation {
+  display: none;
+}
+
+.custom-datepicker-header {
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}

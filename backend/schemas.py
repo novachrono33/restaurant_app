@@ -41,6 +41,17 @@ class BookingRead(BookingBase):
     class Config:
         from_attributes = True
 
+class BookingUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+    booking_time: Optional[datetime] = None
+    number_of_guests: Optional[int] = None
+    table_number: Optional[int] = None
+    extra_info: Optional[str] = None
+    instructions_acknowledged: Optional[bool] = None
+    arrived: Optional[bool] = None
+
 class Token(BaseModel):
     access_token: str
     token_type: str

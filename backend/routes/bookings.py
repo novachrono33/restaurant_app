@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 from typing import List
 
-from backend.schemas import BookingCreate, BookingRead
+from backend.schemas import BookingCreate, BookingRead, BookingUpdate
 from backend.crud import create_booking, get_bookings
 from backend.auth import get_db, get_current_active_user
 from backend import models
@@ -34,6 +34,24 @@ def read_bookings(
 ):
     return get_bookings(db, skip, limit)
 
+@router.patch("/bookings/{booking_id}", response_model=BookingRead, tags=["bookings"])
+def update_booking_partial(
+    booking_id: int,
+    booking: BookingUpdate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    db_booking = db.query(models.Booking).filter(models.Booking.id == booking_id).first()
+    if not db_booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    update_data = booking.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_booking, key, value)
+    
+    db.commit()
+    db.refresh(db_booking)
+    return db_booking
 
 @router.put("/bookings/{booking_id}", response_model=BookingRead, tags=["bookings"])
 def update_booking(

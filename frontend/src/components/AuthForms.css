@@ -1,0 +1,95 @@
+.form-container {
+  max-width: 400px;
+  margin: 40px auto;
+  padding: 24px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  font-family: Arial, sans-serif;
+}
+
+.form-container h2 {
+  margin-bottom: 20px;
+  font-size: 24px;
+  text-align: center;
+  color: #36251A;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #6E1720;
+}
+.form-group input[type="text"],
+.form-group input[type="password"] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #B0AFA9;
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color .2s;
+}
+.form-group input:focus {
+  border-color: #6E1720;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+}
+.checkbox-group input[type="checkbox"] {
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+}
+
+.error-message {
+  margin-bottom: 16px;
+  padding: 10px;
+  background-color: #ffe1e1;
+  border: 1px solid #e06666;
+  border-radius: 4px;
+  color: #a94442;
+  font-size: 14px;
+}
+
+.form-container .btn {
+  display: inline-block;
+  padding: 10px 20px;
+  font-size: 16px;
+  color: #FFFFFF;
+  background-color: #6E1720;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color .2s;
+  text-align: center;
+  width: auto;
+}
+.form-container .btn:hover {
+  background-color: #36251A;
+}
+
+.switch-text {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 14px;
+  color: #36251A;
+}
+.switch-text .link-button {
+  background: none;
+  border: none;
+  color: #6E1720;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+}
+.switch-text .link-button:hover {
+  color: #36251A;
+}

@@ -5,14 +5,12 @@ import BookingList from './components/BookingList';
 import useCurrentUser from './hooks/useCurrentUser';
 
 function App() {
-  // всегда стартуем с false
   const [authed, setAuthed] = useState(false);
   const [mode, setMode] = useState('login');
   const [user, loading, reloadUser] = useCurrentUser(authed);
 
   const handleLoginSuccess = () => {
     setAuthed(true);
-    // после поднятия authed, прокинем запрос на /users/me
     reloadUser();
   };
 
@@ -40,7 +38,7 @@ function App() {
 
   return (
     <div style={{ padding: 20, maxWidth: 600, margin: '0 auto' }}>
-      <h1>Restaurant Booking Client</h1>
+      <h1 style={{ textAlign: 'center' }}>Restaurant Client</h1>
       {mode === 'login' ? (
         <Login
           onLoginSuccess={handleLoginSuccess}

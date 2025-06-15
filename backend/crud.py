@@ -1,6 +1,8 @@
 from sqlalchemy.orm import Session, joinedload
 from backend import models
 from backend.utils import get_password_hash, verify_password
+from datetime import datetime
+from sqlalchemy import func
 
 def get_user_by_username(db: Session, username: str):
     return db.query(models.User).filter_by(username=username).first()
@@ -25,11 +27,21 @@ def create_booking(db: Session, booking):
     db.refresh(db_booking)
     return db_booking
 
-def get_bookings(db: Session, skip: int = 0, limit: int = 100):
-    return (
-        db.query(models.Booking)
-          .options(joinedload(models.Booking.created_by))
-          .offset(skip)
-          .limit(limit)
-          .all()
-    )
+def get_bookings(
+    db: Session,
+    skip: int,
+    limit: int,
+    from_dt: datetime | None = None,
+    to_dt: datetime | None = None,
+):
+    q = db.query(models.Booking).options(joinedload(models.Booking.created_by))
+
+    if from_dt:
+        q = q.filter(models.Booking.booking_time >= from_dt)
+    if to_dt:
+        q = q.filter(models.Booking.booking_time <= to_dt)
+
+    total_count = q.count()
+
+    bookings = q.order_by(models.Booking.booking_time).offset(skip).limit(limit).all()
+    return bookings, total_count

@@ -1,56 +1,140 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '../api';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 import DatePicker from 'react-datepicker';
 import BookingForm from './BookingForm';
 import './BookingList.css';
 import 'react-datepicker/dist/react-datepicker.css';
 
+// Добавляем плагины для работы с UTC и временными зонами
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 export default function BookingList() {
   const PAGE_SIZE = 20;
 
-  const [bookings, setBookings]     = useState([]);
-  const [filter, setFilter]         = useState('today');
+  const [bookings, setBookings] = useState([]);
+  const [filter, setFilter] = useState('today');
   const [customDate, setCustomDate] = useState(new Date());
-  const [page, setPage]             = useState(0);
-  const [hasMore, setHasMore]       = useState(false);
-  const [editing, setEditing]       = useState(null);
-  const [showForm, setShowForm]     = useState(false);
-  const [expandedId, setExpandedId] = useState(null); // <-- добавлено состояние
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [sortConfig, setSortConfig] = useState({
+    key: 'booking_time',
+    direction: 'asc'
+  });
 
   const FILTERS = {
-    today:    () => ({ from: dayjs().startOf('day'),   to: dayjs().endOf('day') }),
-    tomorrow: () => { const m = dayjs().add(1,'day');  return { from: m.startOf('day'), to: m.endOf('day') }; },
-    week:     () => ({ from: dayjs().startOf('week'),  to: dayjs().endOf('week') }),
-    custom:   d => ({ from: dayjs(d).startOf('day'),   to: dayjs(d).endOf('day') }),
-    all:      () => null,
+    today: () => ({ 
+      from: dayjs().startOf('day'), 
+      to: dayjs().endOf('day') 
+    }),
+    tomorrow: () => {
+      const m = dayjs().add(1, 'day');
+      return { from: m.startOf('day'), to: m.endOf('day') };
+    },
+    week: () => ({ 
+      from: dayjs().startOf('week'), 
+      to: dayjs().endOf('week') 
+    }),
+    custom: d => ({ 
+      from: dayjs(d).startOf('day'), 
+      to: dayjs(d).endOf('day') 
+    }),
+    all: () => null,
   };
 
   const loadBookings = useCallback(() => {
-    api.get('/bookings', { params: { skip: page * PAGE_SIZE, limit: PAGE_SIZE } })
-      .then(res => {
-        let data = res.data.map(b => ({ ...b, dt: dayjs(b.booking_time) }));
-        if (filter !== 'all') {
-          const { from, to } = FILTERS[filter](customDate);
-          data = data.filter(b => {
-            const t = b.dt.valueOf();
-            return t >= from.valueOf() && t <= to.valueOf();
-          });
-        }
-        setBookings(data);
-        setHasMore(data.length === PAGE_SIZE);
-      })
-      .catch(console.error);
-  }, [filter, customDate, page]);
+    const params = {
+      skip: page * PAGE_SIZE,
+      limit: PAGE_SIZE,
+    };
 
-  useEffect(() => { setPage(0); }, [filter, customDate]);
-  useEffect(loadBookings, [loadBookings]);
+    // Формируем параметры дат только для не-"all" фильтров
+    if (filter !== 'all') {
+      const { from, to } = FILTERS[filter](customDate);
+      
+      // Исправленный формат дат - без миллисекунд и с указанием временной зоны
+      params.from_dt = from.format('YYYY-MM-DDTHH:mm:ssZ');
+      params.to_dt = to.format('YYYY-MM-DDTHH:mm:ssZ');
+    }
+
+    console.log("Request params:", params); // Для отладки
+
+    api.get('/service/bookings/', {
+      params
+    })
+    .then(res => {
+      const total = parseInt(res.headers['x-total-count'], 10) || 0;
+      setTotalCount(total);
+      setHasMore((page + 1) * PAGE_SIZE < total);
+
+      const data = res.data.map(b => ({
+        ...b,
+        dt: dayjs(b.booking_time),
+        booking_time: new Date(b.booking_time),
+      }));
+
+      // Сортируем данные
+      const sorted = sortBookings(data);
+      setBookings(sorted);
+    })
+    .catch(err => {
+      console.error('Ошибка загрузки бронирований:', err);
+      if (err.response) {
+        console.error('Детали ошибки:', err.response.data);
+      }
+    });
+  }, [filter, customDate, page, sortConfig]);
+
+  useEffect(() => { 
+    setPage(0); 
+  }, [filter, customDate]);
+
+  useEffect(() => {
+    loadBookings();
+  }, [loadBookings]);
+
+  const sortBookings = (data) => {
+    return [...data].sort((a, b) => {
+      const valA = a[sortConfig.key];
+      const valB = b[sortConfig.key];
+      
+      if (valA === undefined || valB === undefined) return 0;
+      
+      // Для дат используем timestamp
+      if (sortConfig.key === 'booking_time') {
+        return sortConfig.direction === 'asc' 
+          ? a.dt - b.dt 
+          : b.dt - a.dt;
+      }
+      
+      // Для остальных типов данных
+      return sortConfig.direction === 'asc'
+        ? String(valA).localeCompare(String(valB))
+        : String(valB).localeCompare(String(valA));
+    });
+  };
+
+  const handleSort = key => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   const headerLabel = () => {
-    if (filter === 'today')   return 'сегодня';
-    if (filter === 'tomorrow')return 'завтра';
-    if (filter === 'week')    return 'на эту неделю';
-    if (filter === 'custom')  return `на ${dayjs(customDate).format('DD-MM-YYYY')}`;
+    if (filter === 'today') return 'сегодня';
+    if (filter === 'tomorrow') return 'завтра';
+    if (filter === 'week') return 'на эту неделю';
+    if (filter === 'custom') return `на ${dayjs(customDate).format('DD-MM-YYYY')}`;
     return '';
   };
 
@@ -59,6 +143,44 @@ export default function BookingList() {
     setShowForm(false);
     setPage(0);
     setExpandedId(null);
+    setConfirmDeleteId(null);
+  };
+
+  const formatPhone = phone => {
+    if (!phone) return '';
+    return phone.replace(/(\d{1})(\d{3})(\d{3})(\d{2})(\d{2})/, '+$1 $2 $3-$4-$5');
+  };
+
+  const handleArrivedChange = async (b, e) => {
+    e.stopPropagation();
+    try {
+      await api.patch(`/bookings/${b.id}`, { arrived: !b.arrived });
+      loadBookings();
+    } catch (err) {
+      console.error('Ошибка при обновлении посещения:', err);
+    }
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditing(null);
+  };
+
+  const handleRowClick = (id, e) => {
+    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+    setConfirmDeleteId(null);
+    setExpandedId(expandedId === id ? null : id);
+  };
+
+  const confirmDelete = async id => {
+    try {
+      await api.delete(`/bookings/${id}`);
+      setConfirmDeleteId(null);
+      setExpandedId(null);
+      loadBookings();
+    } catch (err) {
+      console.error('Ошибка при удалении брони:', err);
+    }
   };
 
   return (
@@ -68,54 +190,54 @@ export default function BookingList() {
       <button
         className="btn"
         onClick={() => {
-          setShowForm(v => !v);
+          setShowForm(true);
           setEditing(null);
           setExpandedId(null);
+          setConfirmDeleteId(null);
         }}
         style={{ marginBottom: 12 }}
       >
         {showForm ? 'Отменить' : 'Добавить бронь'}
       </button>
 
-      {showForm && !editing && (
-        <BookingForm onCreated={() => { loadBookings(); }} />
-      )}
-      {showForm && editing && (
-        <BookingForm
-          editableBooking={editing}
-          onUpdate={() => { loadBookings(); setEditing(null); }}
-        />
+      {showForm && (
+        <div className="form-modal">
+          <div className="form-modal-content">
+            <BookingForm
+              onCreated={() => { loadBookings(); closeForm(); }}
+              onUpdate={() => { loadBookings(); closeForm(); }}
+              editableBooking={editing}
+              onClose={closeForm}
+            />
+          </div>
+        </div>
       )}
 
       <div className="filters">
         {['today','tomorrow','week','custom','all'].map(key => {
-          const labels = {
-            today: 'Сегодня',
-            tomorrow: 'Завтра',
-            week: 'На неделю',
-            custom: 'Выбрать дату',
-            all: 'Все'
-          };
-          return key !== 'custom' ? (
-            <button
-              key={key}
-              className={`btn${filter === key ? ' active' : ''}`}
-              onClick={() => onFilterClick(key)}
-            >
-              {labels[key]}
-            </button>
-          ) : (
-            <DatePicker
-              key="custom"
-              selected={customDate}
-              onChange={date => { setCustomDate(date); onFilterClick('custom'); }}
-              customInput={
-                <button className={`btn${filter === 'custom' ? ' active' : ''}`}>
-                  Выбрать дату
+          const labels = { today: 'Сегодня', tomorrow: 'Завтра', week: 'На неделю', custom: 'Выбрать дату', all: 'Все' };
+          return (
+            <div key={key} className="filter-item">
+              {key !== 'custom' ? (
+                <button
+                  className={`btn${filter === key ? ' active' : ''}`}
+                  onClick={() => onFilterClick(key)}
+                >
+                  {labels[key]}
                 </button>
-              }
-              dateFormat="dd-MM-yyyy"
-            />
+              ) : (
+                <DatePicker
+                  selected={customDate}
+                  onChange={date => { setCustomDate(date); onFilterClick('custom'); }}
+                  customInput={
+                    <button className={`btn${filter === 'custom' ? ' active' : ''}`}>
+                      Выбрать дату
+                    </button>
+                  }
+                  dateFormat="dd-MM-yyyy"
+                />
+              )}
+            </div>
           );
         })}
       </div>
@@ -123,7 +245,9 @@ export default function BookingList() {
       <table className="table">
         <thead>
           <tr>
-            <th>Время</th>
+            <th onClick={() => handleSort('booking_time')}>
+              Время {sortConfig.key === 'booking_time' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+            </th>
             <th>Гость</th>
             <th>Телефон</th>
             <th>Кол-во гостей</th>
@@ -137,14 +261,19 @@ export default function BookingList() {
         <tbody>
           {bookings.map(b => (
             <React.Fragment key={b.id}>
-              <tr onClick={() => setExpandedId(expandedId === b.id ? null : b.id)}>
+              <tr
+                className={`${b.arrived ? 'arrived' : ''} ${expandedId === b.id ? 'expanded' : ''}`}
+                onClick={e => handleRowClick(b.id, e)}
+              >
                 <td>
-                  {filter === 'week'
-                    ? b.dt.format('DD-MM HH:mm')
-                    : b.dt.format('HH:mm')}
+                  {filter === 'all'
+                    ? b.dt.format('HH:mm DD.MM.YYYY')
+                    : filter === 'week'
+                      ? b.dt.format('HH:mm DD-MM')
+                      : b.dt.format('HH:mm')}
                 </td>
                 <td>{`${b.first_name} ${b.last_name}`}</td>
-                <td>{b.phone}</td>
+                <td>{formatPhone(b.phone)}</td>
                 <td style={{ textAlign: 'right' }}>{b.number_of_guests}</td>
                 <td style={{ textAlign: 'right' }}>{b.table_number}</td>
                 <td style={{ textAlign: 'center' }}>
@@ -156,42 +285,59 @@ export default function BookingList() {
                   <input
                     type="checkbox"
                     checked={b.arrived}
-                    onChange={async () => {
-                      await api.put(`/bookings/${b.id}`, {
-                        ...b,
-                        booking_time: b.dt.toISOString(),
-                        arrived: !b.arrived
-                      });
-                      loadBookings();
-                      setExpandedId(null);
-                    }}
+                    onChange={e => handleArrivedChange(b, e)}
                   />
                 </td>
               </tr>
+
               {expandedId === b.id && (
                 <tr className="action-row">
                   <td colSpan={9}>
-                    <button
-                      className="btn"
-                      onClick={() => {
-                        setEditing(b);
-                        setShowForm(true);
-                        setExpandedId(null);
-                      }}
-                    >
-                      Редактировать
-                    </button>
-                    <button
-                      className="btn"
-                      onClick={async () => {
-                        if (!window.confirm('Удалить эту бронь?')) return;
-                        await api.delete(`/bookings/${b.id}`);
-                        loadBookings();
-                        setExpandedId(null);
-                      }}
-                    >
-                      Удалить
-                    </button>
+                    {!confirmDeleteId && (
+                      <div className="action-buttons">
+                        <button
+                          className="btn"
+                          onClick={e => {
+                            e.stopPropagation();
+                            setEditing(b);
+                            setShowForm(true);
+                          }}
+                        >
+                          Редактировать
+                        </button>
+                        <button
+                          className="btn danger"
+                          onClick={e => {
+                            e.stopPropagation();
+                            setConfirmDeleteId(b.id);
+                          }}
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    )}
+                    {confirmDeleteId === b.id && (
+                      <div className="action-buttons">
+                        <button
+                          className="btn"
+                          onClick={e => {
+                            e.stopPropagation();
+                            setConfirmDeleteId(null);
+                          }}
+                        >
+                          Отмена
+                        </button>
+                        <button
+                          className="btn danger"
+                          onClick={e => {
+                            e.stopPropagation();
+                            confirmDelete(b.id);
+                          }}
+                        >
+                          Подтвердить
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               )}
@@ -200,21 +346,26 @@ export default function BookingList() {
         </tbody>
       </table>
 
-      <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between' }}>
-        <button
-          className="btn"
-          onClick={() => setPage(p => Math.max(p - 1, 0))}
-          disabled={page === 0}
-        >
-          ← Назад
-        </button>
-        <button
-          className="btn"
-          onClick={() => setPage(p => p + 1)}
-          disabled={!hasMore}
-        >
-          Вперед →
-        </button>
+      <div className="pagination-container">
+        <div className="pagination-info">
+          Страница: {page + 1} из {Math.max(Math.ceil(totalCount / PAGE_SIZE), 1)} | Всего записей: {totalCount}
+        </div>
+        <div className="pagination-controls">
+          <button
+            className="btn"
+            onClick={() => setPage(p => Math.max(p - 1, 0))}
+            disabled={page === 0}
+          >
+            ← Назад
+          </button>
+          <button
+            className="btn"
+            onClick={() => setPage(p => p + 1)}
+            disabled={(page + 1) * PAGE_SIZE >= totalCount}
+          >
+            Вперед →
+          </button>
+        </div>
       </div>
     </div>
   );
